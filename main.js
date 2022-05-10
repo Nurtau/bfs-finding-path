@@ -29,7 +29,7 @@ function randInt(n) {
 
 async function wait(milliseconds) {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(), milliseconds);
+    setTimeout(resolve, milliseconds);
   });
 }
 
@@ -67,8 +67,6 @@ class Table {
       this.#cells.push(horizontalCells);
     }
     this._chooseStartEnd();
-    this._colorTransition(this.#start);
-    this._colorTransition(this.#end);
 
     this.#root.appendChild(table);
   }
@@ -80,26 +78,27 @@ class Table {
     q.enqueue(this.#start);
 
     while (q.length !== 0) {
-      const [h, w] = q.dequeue();
-      if (
-        h < 0 ||
-        h >= this.#height ||
-        w < 0 ||
-        w >= this.#width ||
-        this.#cells[h][w].isVisited
-      )
-        continue;
+      for (let i = 0; i < q.length; i++) {
+        const [h, w] = q.dequeue();
+        if (
+          h < 0 ||
+          h >= this.#height ||
+          w < 0 ||
+          w >= this.#width ||
+          this.#cells[h][w].isVisited
+        )
+          continue;
 
-      if (h === this.#end[0] && w === this.#end[1]) return;
-      this._colorTransition([h, w]);
-      this.#cells[h][w].isVisited = true;
+        if (h === this.#end[0] && w === this.#end[1]) return;
+        this._passCell([h, w]);
+        this.#cells[h][w].isVisited = true;
 
-      q.enqueue([h, w + 1]);
-      q.enqueue([h + 1, w]);
-      q.enqueue([h, w - 1]);
-      q.enqueue([h - 1, w]);
-
-      await wait(100 / q.length);
+        q.enqueue([h, w + 1]);
+        q.enqueue([h + 1, w]);
+        q.enqueue([h, w - 1]);
+        q.enqueue([h - 1, w]);
+      }
+      await wait(50);
     }
   }
 
@@ -107,10 +106,27 @@ class Table {
   _chooseStartEnd() {
     this.#start = [randInt(this.#height), randInt(this.#width)];
     this.#end = [randInt(this.#height), randInt(this.#width)];
+    this._passCell(this.#start, false);
+    this._passCell(this.#end, false);
   }
 
-  _colorTransition([h, w]) {
-    this.#cells[h][w].element.style.backgroundColor = "black";
+  async _passCell([h, w], animate = true) {
+    //@TODO: resolve css animation performance issue: use tranforms to avoid layout calculations
+    const element = document.createElement("div");
+    element.classList.add("inner-cell");
+
+    if (animate) {
+      element.classList.add("passing-cell");
+    }
+
+    this.#cells[h][w].element.appendChild(element);
+
+    if (animate) {
+      await wait(20);
+    }
+
+    element.classList.remove("passing-cell");
+    element.classList.add("passed-cell");
   }
 }
 
